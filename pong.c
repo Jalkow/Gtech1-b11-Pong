@@ -34,7 +34,7 @@
 #define BALL_HEIGHT     8 // hauteur balle
 #define BALL_INIT_X WINDOW_WIDTH/2 - BALL_WIDTH/2 - 1   // position initiale en x balle
 #define BALL_INIT_Y WINDOW_HEIGHT/2 - BALL_HEIGHT/2 - 1 // position initiale en y balle
-#define BALL_INIT_VX   10 // Vitesse initiale en x (en pixel/frame)
+#define BALL_INIT_VX   5 // Vitesse initiale en x (en pixel/frame)
 #define BALL_INIT_VY    5 // Vitesse initiale en y (en pixel/frame)
 
 // ParamÃ¨tres d'affichage du score:
@@ -52,19 +52,10 @@
 #define P1_COLOR {127, 127, 255, 255}    // Couleur de la raquette du joueur 1
 #define P2_COLOR {127, 127, 255, 255}    // Couleur de la raquette du joueur 2
 
-
-bool segment_state[10][7] = {{true, true, true, false, true, true, true},     //0
-                             {false, false, true, false, false, true, false}, //1
-                             {true, false, true, true, true, false, true},    //2
-                             {true, false, true, true, false, true, true},    //3
-                             {false, true, true, true, false, true , false},  //4
-                             {true, true, false, true, false, true, true},    //5
-                             {true, true, false, true, true, true, true},     //6
-                             {true, false, true, false, false, true, false},  //7
-                             {true, true, true, true, true, true, true},      //8
-                             {true, true, true, true, false, true, true}      //9
-
-};
+typedef enum {
+    V_DIR_UP,
+    V_DIR_DOWN
+} V_Direction; 
 
 void draw_ball(SDL_Renderer* renderer, int x_coord, int y_coord){
     static const SDL_Color ball_color = BALL_COLOR;
@@ -94,6 +85,19 @@ void draw_digit(int number, int coord_x, int coord_y, SDL_Renderer* renderer){
         {SCORE_LENGTH - SCORE_WIDTH, SCORE_LENGTH - SCORE_WIDTH, SCORE_WIDTH, SCORE_LENGTH}, //verticale bas droite
         {0, 2 * (SCORE_LENGTH - SCORE_WIDTH), SCORE_LENGTH, SCORE_WIDTH} // honrizontale en bas
     };
+
+    static const bool segment_state[10][7] = {
+        {true, true, true, false, true, true, true},     //0
+        {false, false, true, false, false, true, false}, //1
+        {true, false, true, true, true, false, true},    //2
+        {true, false, true, true, false, true, true},    //3
+        {false, true, true, true, false, true , false},  //4
+        {true, true, false, true, false, true, true},    //5
+        {true, true, false, true, true, true, true},     //6
+        {true, false, true, false, false, true, false},  //7
+        {true, true, true, true, true, true, true},      //8
+        {true, true, true, true, false, true, true}      //9
+    };      
 
     int i;
     
@@ -151,8 +155,8 @@ void draw_rackets(SDL_Renderer* renderer, int j1_x_coord, int j1_y_coord, int j2
 }
 
 /* moves a racket down or up */
-void move_rackets(int direction, int* y_coord){
-    if (direction == -1 && *y_coord + RACKET_HEIGHT < WINDOW_HEIGHT){
+void move_racket(V_Direction direction, int* y_coord){
+    if (direction == V_DIR_DOWN && *y_coord + RACKET_HEIGHT < WINDOW_HEIGHT){
         *y_coord += RACKET_DY;
     }
     else if (*y_coord > 0){
@@ -160,11 +164,13 @@ void move_rackets(int direction, int* y_coord){
     } 
 }
 
+/*moves the ball using it's actual speed in pixel/frame*/
 void move_ball(int x_speed, int y_speed, int* ball_coord_x, int* ball_coord_y){
     *ball_coord_x += x_speed;
     *ball_coord_y += y_speed;
 }
 
+/*tests if the ball collides with the edges, changing it's direction and if it collides with the right or left edge, it adds a point to the corresponding player */
 void test_edge_colisions(int ball_coord_x, int ball_coord_y, int* ball_x_speed, int* ball_y_speed, int* scorej1, int* scorej2){
     if (ball_coord_x > WINDOW_WIDTH){
         *ball_y_speed = -*ball_y_speed;
@@ -180,6 +186,7 @@ void test_edge_colisions(int ball_coord_x, int ball_coord_y, int* ball_x_speed, 
 
 }
 
+/*tests if the ball collides with the rackets, changing it's direction */
 void test_racket_colisions(int ball_coord_x, int ball_coord_y, int* ball_x_speed, int* ball_y_speed, int racketJ1_coord_y, int racketJ2_coord_y){
     if (ball_coord_y >= racketJ1_coord_y - *ball_y_speed && ball_coord_y <= racketJ1_coord_y + *ball_y_speed + RACKET_HEIGHT && ball_coord_x >= RACKET_INIT_X_P1 && ball_coord_x <= RACKET_INIT_X_P1 + RACKET_WIDTH){
         *ball_y_speed = -*ball_y_speed;
@@ -246,19 +253,19 @@ int main(int argc, char *argv[])
             draw_rackets(renderer, racketJ1_actual_x_coord, racketJ1_actual_y_coord, racketJ2_actual_x_coord, racketJ2_actual_y_coord);
             draw_ball(renderer, ball_actual_x_coord, ball_actual_y_coord);
 
-            while (SDL_PollEvent(&event) == 1){
+            while (SDL_PollEvent(&event)){
                 if (event.type == SDL_KEYDOWN){
                     if (event.key.keysym.scancode == SDL_SCANCODE_DOWN){
-                        move_rackets(-1, &racketJ1_actual_y_coord);
+                        move_racket(V_DIR_DOWN, &racketJ1_actual_y_coord);
                     }
                     if (event.key.keysym.scancode == SDL_SCANCODE_UP){
-                        move_rackets(1, &racketJ1_actual_y_coord);
+                        move_racket(V_DIR_UP, &racketJ1_actual_y_coord);
                     }
                     if (event.key.keysym.sym == SDLK_s){
-                        move_rackets(-1, &racketJ2_actual_y_coord);
+                        move_racket(V_DIR_DOWN, &racketJ2_actual_y_coord);
                     }
                     if (event.key.keysym.sym == SDLK_z){
-                        move_rackets(1, &racketJ2_actual_y_coord);
+                        move_racket(V_DIR_UP, &racketJ2_actual_y_coord);
                     }
                 }
             }
@@ -266,10 +273,15 @@ int main(int argc, char *argv[])
             test_edge_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, &J1_actual_score, &J2_actual_score);
             test_racket_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, racketJ1_actual_y_coord, racketJ2_actual_y_coord);
             SDL_RenderPresent(renderer);
-            SDL_Delay(20);
+            SDL_Delay(10);
         }
 
     // Destruction du renderer et de la fenÃªtre :
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+    SDL_Delay(2000);
+
     SDL_DestroyRenderer(renderer); 
     SDL_DestroyWindow(window);
     SDL_Quit();  //on quitte la SDL
