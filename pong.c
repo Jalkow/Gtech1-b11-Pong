@@ -22,12 +22,12 @@
 #define NET_DASH_PERIOD  16 // pÃ©riodicitÃ© des rectangles
 
 // ParamÃ¨tres des raquettes:
-#define RACKET_WIDTH    8  // largeur raquette
-#define RACKET_HEIGHT  60  // hauteur raquette (le jeu originel utilise 30!)
+#define RACKET_WIDTH    11  // largeur raquette
+#define RACKET_HEIGHT  90  // hauteur raquette (le jeu originel utilise 30!)
 #define RACKET_INIT_X_P1   120 // position initiale en x raquette joueur 1
 #define RACKET_INIT_X_P2   WINDOW_WIDTH - RACKET_INIT_X_P1 - RACKET_WIDTH - 1 // pour la raquette du joueur 2
 #define RACKET_INIT_Y      WINDOW_HEIGHT/2 - RACKET_HEIGHT/2 - 1 // position initiale en y des deux raquettes
-#define RACKET_DY      24  // vitesse de dÃ©placement (en y) des raquettes (en pixel/frame ou pixel/touche)
+#define RACKET_DY      35  // vitesse de dÃ©placement (en y) des raquettes (en pixel/frame ou pixel/touche)
 
 // ParamÃ¨tres de la balle:
 #define BALL_WIDTH      8 // largeur balle
@@ -152,10 +152,10 @@ void draw_rackets(SDL_Renderer* renderer, int j1_x_coord, int j1_y_coord, int j2
 
 /* moves a racket down or up */
 void move_rackets(int direction, int* y_coord){
-    if (direction == -1){
+    if (direction == -1 && *y_coord + RACKET_HEIGHT < WINDOW_HEIGHT){
         *y_coord += RACKET_DY;
     }
-    else{
+    else if (*y_coord > 0){
         *y_coord -= RACKET_DY;
     } 
 }
@@ -165,31 +165,54 @@ void move_ball(int x_speed, int y_speed, int* ball_coord_x, int* ball_coord_y){
     *ball_coord_y += y_speed;
 }
 
+void test_edge_colisions(int ball_coord_x, int ball_coord_y, int* ball_x_speed, int* ball_y_speed, int* scorej1, int* scorej2){
+    if (ball_coord_x > WINDOW_WIDTH){
+        *ball_y_speed = -*ball_y_speed;
+        *scorej2 +=1;
+    }
+    else if(ball_coord_x < 0){
+        *ball_y_speed = -*ball_y_speed;
+        *scorej1 +=1;
+    }
+    if (ball_coord_y > WINDOW_HEIGHT || ball_coord_y < 0){
+        *ball_x_speed = -*ball_x_speed;
+    }
+
+}
+
+void test_racket_colisions(int ball_coord_x, int ball_coord_y, int* ball_x_speed, int* ball_y_speed, int racketJ1_coord_y, int racketJ2_coord_y){
+    if (ball_coord_y >= racketJ1_coord_y - *ball_y_speed && ball_coord_y <= racketJ1_coord_y + *ball_y_speed + RACKET_HEIGHT && ball_coord_x >= RACKET_INIT_X_P1 && ball_coord_x <= RACKET_INIT_X_P1 + RACKET_WIDTH){
+        *ball_y_speed = -*ball_y_speed;
+    }
+    else if (ball_coord_y >= racketJ2_coord_y - *ball_y_speed && ball_coord_y <= racketJ2_coord_y + *ball_y_speed + RACKET_HEIGHT && ball_coord_x >= RACKET_INIT_X_P2  && ball_coord_x <= RACKET_INIT_X_P2 + RACKET_WIDTH){
+        *ball_y_speed = -*ball_y_speed;
+    }
+}
+
 int main(int argc, char *argv[])
 {
-    SDL_Window* fenetre;  // DÃ©claration de la fenÃªtre
-    SDL_Renderer* renderer; // DÃ©claration du renderer
+    SDL_Window* window;
+    SDL_Renderer* renderer;
     int i;
 
-    if(SDL_Init(SDL_INIT_VIDEO) < 0)  // initialisation de la SDL
+    if(SDL_Init(SDL_INIT_VIDEO) < 0)
     {
        printf("Erreur d'initialisation de la SDL : %s", SDL_GetError());
        return EXIT_FAILURE;
     }
 
-    fenetre = SDL_CreateWindow("Compteur",
+    window = SDL_CreateWindow("Compteur",
         SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE);  // CrÃ©ation de la fenÃªtre
+        SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_RESIZABLE); 
 
-    if (fenetre == NULL)  //gestion des erreurs
-    {
+    if (window == NULL){
         printf("Erreur lors de la creation d'une fenetre : %s", SDL_GetError());
         return EXIT_FAILURE;
     }
 
-    renderer = SDL_CreateRenderer(fenetre, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC); // CrÃ©ation du renderer
-
-    if(renderer == NULL)//gestion des erreurs
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    
+    if(renderer == NULL)
     {
         printf("Erreur lors de la creation d'un renderer : %s",SDL_GetError());
         return EXIT_FAILURE;
@@ -218,6 +241,8 @@ int main(int argc, char *argv[])
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
             SDL_RenderClear(renderer);
             draw_net(renderer);
+            draw_number(J1_actual_score, SCORE_X_P1, SCORE_Y, renderer);
+            draw_number(J2_actual_score, SCORE_X_P2, SCORE_Y, renderer);
             draw_rackets(renderer, racketJ1_actual_x_coord, racketJ1_actual_y_coord, racketJ2_actual_x_coord, racketJ2_actual_y_coord);
             draw_ball(renderer, ball_actual_x_coord, ball_actual_y_coord);
 
@@ -238,15 +263,15 @@ int main(int argc, char *argv[])
                 }
             }
             move_ball(ball_actual_x_speed, ball_actual_y_speed, &ball_actual_x_coord, &ball_actual_y_coord);
-            draw_number(J1_actual_score, SCORE_X_P1, SCORE_Y, renderer);
-            draw_number(J2_actual_score, SCORE_X_P2, SCORE_Y, renderer);
+            test_edge_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, &J1_actual_score, &J2_actual_score);
+            test_racket_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, racketJ1_actual_y_coord, racketJ2_actual_y_coord);
             SDL_RenderPresent(renderer);
             SDL_Delay(20);
         }
 
     // Destruction du renderer et de la fenÃªtre :
     SDL_DestroyRenderer(renderer); 
-    SDL_DestroyWindow(fenetre);
+    SDL_DestroyWindow(window);
     SDL_Quit();  //on quitte la SDL
     return 0;
 }
