@@ -27,15 +27,15 @@
 #define RACKET_INIT_X_P1   120 // position initiale en x raquette joueur 1
 #define RACKET_INIT_X_P2   WINDOW_WIDTH - RACKET_INIT_X_P1 - RACKET_WIDTH - 1 // pour la raquette du joueur 2
 #define RACKET_INIT_Y      WINDOW_HEIGHT/2 - RACKET_HEIGHT/2 - 1 // position initiale en y des deux raquettes
-#define RACKET_DY      35  // vitesse de dÃ©placement (en y) des raquettes (en pixel/frame ou pixel/touche)
+#define RACKET_DY      50  // vitesse de dÃ©placement (en y) des raquettes (en pixel/frame ou pixel/touche)
 
 // ParamÃ¨tres de la balle:
 #define BALL_WIDTH      8 // largeur balle
 #define BALL_HEIGHT     8 // hauteur balle
 #define BALL_INIT_X WINDOW_WIDTH/2 - BALL_WIDTH/2 - 1   // position initiale en x balle
 #define BALL_INIT_Y WINDOW_HEIGHT/2 - BALL_HEIGHT/2 - 1 // position initiale en y balle
-#define BALL_INIT_VX   5 // Vitesse initiale en x (en pixel/frame)
-#define BALL_INIT_VY    5 // Vitesse initiale en y (en pixel/frame)
+#define BALL_INIT_VX   4 // Vitesse initiale en x (en pixel/frame)
+#define BALL_INIT_VY    2 // Vitesse initiale en y (en pixel/frame)
 
 // ParamÃ¨tres d'affichage du score:
 #define SCORE_WINNER  11 // Score qui fait qu'un joueur a gagnÃ©
@@ -170,17 +170,27 @@ void move_ball(int x_speed, int y_speed, int* ball_coord_x, int* ball_coord_y){
     *ball_coord_y += y_speed;
 }
 
+void reset_positions(int* ball_x_coord, int* ball_y_coord, int* racketJ1_y_coord, int* racketJ2_y_coord, bool* inputs_allowed){
+    *ball_x_coord = BALL_INIT_X;
+    *ball_y_coord = BALL_INIT_Y;
+    *racketJ1_y_coord = RACKET_INIT_Y;
+    *racketJ2_y_coord = RACKET_INIT_Y;
+    SDL_Delay(1000);
+}
+
 /*tests if the ball collides with the edges, changing it's direction and if it collides with the right or left edge, it adds a point to the corresponding player */
-void test_edge_colisions(int ball_coord_x, int ball_coord_y, int* ball_x_speed, int* ball_y_speed, int* scorej1, int* scorej2){
-    if (ball_coord_x > WINDOW_WIDTH){
+void test_edge_colisions(int* ball_coord_x, int* ball_coord_y, int* ball_x_speed, int* ball_y_speed, int* scorej1, int* scorej2, int* racketJ1_y_coord, int* racketJ2_y_coord, bool* inputs_allowed){
+    if (*ball_coord_x > WINDOW_WIDTH){
         *ball_y_speed = -*ball_y_speed;
+        reset_positions(ball_coord_x, ball_coord_y, racketJ1_y_coord, racketJ2_y_coord, inputs_allowed);
         *scorej2 +=1;
     }
-    else if(ball_coord_x < 0){
+    else if(*ball_coord_x < 0){
         *ball_y_speed = -*ball_y_speed;
+        reset_positions(ball_coord_x, ball_coord_y, racketJ1_y_coord, racketJ2_y_coord, inputs_allowed);
         *scorej1 +=1;
     }
-    if (ball_coord_y > WINDOW_HEIGHT || ball_coord_y < 0){
+    if (*ball_coord_y > WINDOW_HEIGHT || *ball_coord_y < 0){
         *ball_x_speed = -*ball_x_speed;
     }
 
@@ -240,6 +250,8 @@ int main(int argc, char *argv[])
     int J1_actual_score = 0;
     int J2_actual_score = 0;
 
+    bool allow_input = true;
+
     SDL_Event event;
 
 
@@ -254,7 +266,7 @@ int main(int argc, char *argv[])
             draw_ball(renderer, ball_actual_x_coord, ball_actual_y_coord);
 
             while (SDL_PollEvent(&event)){
-                if (event.type == SDL_KEYDOWN){
+                if (event.type == SDL_KEYDOWN && allow_input == true){
                     if (event.key.keysym.scancode == SDL_SCANCODE_DOWN){
                         move_racket(V_DIR_DOWN, &racketJ1_actual_y_coord);
                     }
@@ -270,7 +282,7 @@ int main(int argc, char *argv[])
                 }
             }
             move_ball(ball_actual_x_speed, ball_actual_y_speed, &ball_actual_x_coord, &ball_actual_y_coord);
-            test_edge_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, &J1_actual_score, &J2_actual_score);
+            test_edge_colisions(&ball_actual_x_coord, &ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, &J1_actual_score, &J2_actual_score, &racketJ1_actual_y_coord, &racketJ2_actual_y_coord, &allow_input);
             test_racket_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, racketJ1_actual_y_coord, racketJ2_actual_y_coord);
             SDL_RenderPresent(renderer);
             SDL_Delay(10);
