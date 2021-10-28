@@ -175,24 +175,24 @@ void move_ball(int x_speed, int y_speed, int* ball_coord_x, int* ball_coord_y){
     *ball_coord_y += y_speed;
 }
 
-void reset_positions(int* ball_x_coord, int* ball_y_coord, int* racketJ1_y_coord, int* racketJ2_y_coord, bool* inputs_allowed){
+void reset_positions_and_speed(int* ball_x_coord, int* ball_y_coord, int* racketJ1_y_coord, int* racketJ2_y_coord, int* ball_x_speed, int* ball_y_speed){
     *ball_x_coord = BALL_INIT_X;
     *ball_y_coord = BALL_INIT_Y;
     *racketJ1_y_coord = RACKET_INIT_Y;
     *racketJ2_y_coord = RACKET_INIT_Y;
+    *ball_x_speed = BALL_INIT_VX;
+    *ball_y_speed = BALL_INIT_VY;
     SDL_Delay(1000);
 }
 
 /*tests if the ball collides with the edges, changing it's direction and if it collides with the right or left edge, it adds a point to the corresponding player */
-void test_edge_colisions(int* ball_coord_x, int* ball_coord_y, int* ball_x_speed, int* ball_y_speed, int* scorej1, int* scorej2, int* racketJ1_y_coord, int* racketJ2_y_coord, bool* inputs_allowed){
+void test_edge_colisions(int* ball_coord_x, int* ball_coord_y, int* ball_x_speed, int* ball_y_speed, int* scorej1, int* scorej2, int* racketJ1_y_coord, int* racketJ2_y_coord){
     if (*ball_coord_x > WINDOW_WIDTH){
-        *ball_y_speed = -*ball_y_speed;
-        reset_positions(ball_coord_x, ball_coord_y, racketJ1_y_coord, racketJ2_y_coord, inputs_allowed);
+        reset_positions_and_speed(ball_coord_x, ball_coord_y, racketJ1_y_coord, racketJ2_y_coord, ball_x_speed, ball_y_speed);
         *scorej1 +=1;
     }
     else if(*ball_coord_x < 0){
-        *ball_y_speed = -*ball_y_speed;
-        reset_positions(ball_coord_x, ball_coord_y, racketJ1_y_coord, racketJ2_y_coord, inputs_allowed);
+        reset_positions_and_speed(ball_coord_x, ball_coord_y, racketJ1_y_coord, racketJ2_y_coord, ball_x_speed, ball_y_speed);
         *scorej2 +=1;
     }
     if (*ball_coord_y > WINDOW_HEIGHT || *ball_coord_y < 0){
@@ -322,8 +322,8 @@ int main(int argc, char *argv[])
             }
         }
         move_ball(ball_actual_x_speed, ball_actual_y_speed, &ball_actual_x_coord, &ball_actual_y_coord);
-        test_edge_colisions(&ball_actual_x_coord, &ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, &J1_actual_score, &J2_actual_score, &racketJ1_actual_y_coord, &racketJ2_actual_y_coord, &allow_input);
-        test_racket_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, racketJ1_actual_y_coord, racketJ2_actual_y_coord);
+        test_edge_colisions(&ball_actual_x_coord, &ball_actual_y_coord, &ball_actual_x_speed, &ball_actual_y_speed, &J1_actual_score, &J2_actual_score, &racketJ1_actual_y_coord, &racketJ2_actual_y_coord);
+        test_racket_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_x_speed, &ball_actual_y_speed, racketJ1_actual_y_coord, racketJ2_actual_y_coord);
         SDL_RenderPresent(renderer);
         SDL_Delay(10);
     }
