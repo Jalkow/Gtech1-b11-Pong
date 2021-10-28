@@ -1,8 +1,10 @@
+#include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+
 
 // Dimensions fenetre = dims "renderer" = dims du "playground":
 #define WINDOW_WIDTH  800
@@ -19,7 +21,7 @@
 #define NET_DASH_Y_LAST 560 // dernier rectangle
 #define NET_DASH_WIDTH    4 // largeur rectangle
 #define NET_DASH_HEIGTH   8 // hauteur rectangle
-#define NET_DASH_PERIOD  16 // pÃ©riodicitÃ© des rectangles
+#define NET_DASH_PERIOD  16 // periodicite des rectangles
 
 // Parametres des raquettes:
 #define RACKET_WIDTH    11  // largeur raquette
@@ -27,7 +29,7 @@
 #define RACKET_INIT_X_P1   120 // position initiale en x raquette joueur 1
 #define RACKET_INIT_X_P2   WINDOW_WIDTH - RACKET_INIT_X_P1 - RACKET_WIDTH - 1 // pour la raquette du joueur 2
 #define RACKET_INIT_Y      WINDOW_HEIGHT/2 - RACKET_HEIGHT/2 - 1 // position initiale en y des deux raquettes
-#define RACKET_DY      50  // vitesse de dÃ©placement (en y) des raquettes (en pixel/frame ou pixel/touche)
+#define RACKET_DY      50  // vitesse de deplacement (en y) des raquettes (en pixel/frame ou pixel/touche)
 #define RACKET_SPEED_UP_HEIGHT 20 // hauteur des zones sur le coté des raquettes qui augmentent la vitesse de la balle
 
 // Parametres de la balle:
@@ -74,8 +76,9 @@ void draw_segment(SDL_Renderer* renderer, int coord_x, int coord_y, int length, 
     SDL_RenderFillRect(renderer,  rect);
 
 
-    // dessiner le segment des coord de dÃ©part aux coords de fin
+   
 }
+
 
 void draw_digit(int number, int coord_x, int coord_y, SDL_Renderer* renderer){
     static const SDL_Rect digit_segments[7] = {
@@ -232,7 +235,18 @@ int main(int argc, char *argv[])
 {
     SDL_Window* window;
     SDL_Renderer* renderer;
+    TTF_Font* police;
+    SDL_Surface* texte_surface = NULL;
+    SDL_Color white = {255, 255, 255, 255};
+    SDL_Rect text_pos;
     int i;
+    
+
+    if(TTF_Init() == -1)
+    {
+        fprintf(stderr, "Erreur d'initialisation de TTF_Init : %s\n", TTF_GetError());
+        exit(EXIT_FAILURE);
+    }
 
     if(SDL_Init(SDL_INIT_VIDEO) < 0)
     {
@@ -276,48 +290,63 @@ int main(int argc, char *argv[])
 
     SDL_Event event;
 
+    police = TTF_OpenFont("arial.ttf", 72);
+    if (police == NULL){
+        fprintf(stderr, "cannot load font : %s \n", TTF_GetError());
+    }
 
-        
-        while (J1_actual_score < 11 && J2_actual_score < 11){
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL_RenderClear(renderer);
-            draw_net(renderer);
-            draw_number(J1_actual_score, SCORE_X_P1, SCORE_Y, renderer);
-            draw_number(J2_actual_score, SCORE_X_P2, SCORE_Y, renderer);
-            draw_rackets(renderer, racketJ1_actual_x_coord, racketJ1_actual_y_coord, racketJ2_actual_x_coord, racketJ2_actual_y_coord);
-            draw_ball(renderer, ball_actual_x_coord, ball_actual_y_coord);
+    /* boucle de jeu */
+    while (J1_actual_score < SCORE_WINNER && J2_actual_score < SCORE_WINNER){
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+        SDL_RenderClear(renderer);
+        draw_net(renderer);
+        draw_number(J1_actual_score, SCORE_X_P1, SCORE_Y, renderer);
+        draw_number(J2_actual_score, SCORE_X_P2, SCORE_Y, renderer);
+        draw_rackets(renderer, racketJ1_actual_x_coord, racketJ1_actual_y_coord, racketJ2_actual_x_coord, racketJ2_actual_y_coord);
+        draw_ball(renderer, ball_actual_x_coord, ball_actual_y_coord);
 
-            while (SDL_PollEvent(&event)){
-                if (event.type == SDL_KEYDOWN && allow_input == true){
-                    if (event.key.keysym.scancode == SDL_SCANCODE_DOWN){
-                        move_racket(V_DIR_DOWN, &racketJ1_actual_y_coord);
-                    }
-                    if (event.key.keysym.scancode == SDL_SCANCODE_UP){
-                        move_racket(V_DIR_UP, &racketJ1_actual_y_coord);
-                    }
-                    if (event.key.keysym.sym == SDLK_s){
-                        move_racket(V_DIR_DOWN, &racketJ2_actual_y_coord);
-                    }
-                    if (event.key.keysym.sym == SDLK_z){
-                        move_racket(V_DIR_UP, &racketJ2_actual_y_coord);
-                    }
+        while (SDL_PollEvent(&event)){
+            if (event.type == SDL_KEYDOWN && allow_input == true){
+                if (event.key.keysym.scancode == SDL_SCANCODE_DOWN){
+                    move_racket(V_DIR_DOWN, &racketJ1_actual_y_coord);
+                }
+                if (event.key.keysym.scancode == SDL_SCANCODE_UP){
+                    move_racket(V_DIR_UP, &racketJ1_actual_y_coord);
+                }
+                if (event.key.keysym.sym == SDLK_s){
+                    move_racket(V_DIR_DOWN, &racketJ2_actual_y_coord);
+                }
+                if (event.key.keysym.sym == SDLK_z){
+                    move_racket(V_DIR_UP, &racketJ2_actual_y_coord);
                 }
             }
-            move_ball(ball_actual_x_speed, ball_actual_y_speed, &ball_actual_x_coord, &ball_actual_y_coord);
-            test_edge_colisions(&ball_actual_x_coord, &ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, &J1_actual_score, &J2_actual_score, &racketJ1_actual_y_coord, &racketJ2_actual_y_coord, &allow_input);
-            test_racket_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, racketJ1_actual_y_coord, racketJ2_actual_y_coord);
-            SDL_RenderPresent(renderer);
-            SDL_Delay(10);
         }
+        move_ball(ball_actual_x_speed, ball_actual_y_speed, &ball_actual_x_coord, &ball_actual_y_coord);
+        test_edge_colisions(&ball_actual_x_coord, &ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, &J1_actual_score, &J2_actual_score, &racketJ1_actual_y_coord, &racketJ2_actual_y_coord, &allow_input);
+        test_racket_colisions(ball_actual_x_coord, ball_actual_y_coord, &ball_actual_y_speed, &ball_actual_x_speed, racketJ1_actual_y_coord, racketJ2_actual_y_coord);
+        SDL_RenderPresent(renderer);
+        SDL_Delay(10);
+    }
 
-    // Destruction du renderer et de la fenÃªtre :
+    /* affichage message de victoire */
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
     SDL_RenderClear(renderer);
-    SDL_RenderPresent(renderer);
-    SDL_Delay(2000);
 
+    texte_surface = TTF_RenderText_Blended(police, J1_actual_score == SCORE_WINNER ? "Player 1 won !" : "Player 2 won !", white);
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, texte_surface);
+    SDL_QueryTexture(texture, NULL, NULL, &text_pos.w, &text_pos.h);
+    text_pos.x = (WINDOW_WIDTH - text_pos.w)/2;
+    text_pos.y = WINDOW_HEIGHT/4;
+    SDL_RenderCopy(renderer, texture, NULL, &text_pos);
+    SDL_RenderPresent(renderer);
+    
+    SDL_Delay(5000);
+    
+    SDL_DestroyTexture(texture);
+    SDL_FreeSurface(texte_surface);
+    TTF_CloseFont(police);
     SDL_DestroyRenderer(renderer); 
     SDL_DestroyWindow(window);
-    SDL_Quit();  //on quitte la SDL
+    SDL_Quit();
     return 0;
 }
