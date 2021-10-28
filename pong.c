@@ -4,11 +4,11 @@
 #include <stdbool.h>
 #include <math.h>
 
-// Dimensions fenÃªtre = dims "renderer" = dims du "playground":
+// Dimensions fenetre = dims "renderer" = dims du "playground":
 #define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 600
 
-// ExtrÃ©mitÃ©s du playground:
+// Extremites du playground:
 #define PLAYGROUND_LIM_XMIN 0
 #define PLAYGROUND_LIM_XMAX WINDOW_WIDTH - BALL_WIDTH - 1
 #define PLAYGROUND_LIM_BOTTOM 0
@@ -21,23 +21,25 @@
 #define NET_DASH_HEIGTH   8 // hauteur rectangle
 #define NET_DASH_PERIOD  16 // pÃ©riodicitÃ© des rectangles
 
-// ParamÃ¨tres des raquettes:
+// Parametres des raquettes:
 #define RACKET_WIDTH    11  // largeur raquette
 #define RACKET_HEIGHT  90  // hauteur raquette (le jeu originel utilise 30!)
 #define RACKET_INIT_X_P1   120 // position initiale en x raquette joueur 1
 #define RACKET_INIT_X_P2   WINDOW_WIDTH - RACKET_INIT_X_P1 - RACKET_WIDTH - 1 // pour la raquette du joueur 2
 #define RACKET_INIT_Y      WINDOW_HEIGHT/2 - RACKET_HEIGHT/2 - 1 // position initiale en y des deux raquettes
 #define RACKET_DY      50  // vitesse de dÃ©placement (en y) des raquettes (en pixel/frame ou pixel/touche)
+#define RACKET_SPEED_UP_HEIGHT 20 // hauteur des zones sur le coté des raquettes qui augmentent la vitesse de la balle
 
-// ParamÃ¨tres de la balle:
+// Parametres de la balle:
 #define BALL_WIDTH      8 // largeur balle
 #define BALL_HEIGHT     8 // hauteur balle
 #define BALL_INIT_X WINDOW_WIDTH/2 - BALL_WIDTH/2 - 1   // position initiale en x balle
 #define BALL_INIT_Y WINDOW_HEIGHT/2 - BALL_HEIGHT/2 - 1 // position initiale en y balle
 #define BALL_INIT_VX   4 // Vitesse initiale en x (en pixel/frame)
 #define BALL_INIT_VY    2 // Vitesse initiale en y (en pixel/frame)
+#define BALL_MAX_X_SPEED 10
 
-// ParamÃ¨tres d'affichage du score:
+// Parametres d'affichage du score:
 #define SCORE_WINNER  11 // Score qui fait qu'un joueur a gagnÃ©
 #define SCORE_X_P1    180 // x0 pour l'affichage du premier digit du joueur 1
 #define SCORE_X_P2    550 // x0 pour l'affichage du premier digit du joueur 2
@@ -183,12 +185,12 @@ void test_edge_colisions(int* ball_coord_x, int* ball_coord_y, int* ball_x_speed
     if (*ball_coord_x > WINDOW_WIDTH){
         *ball_y_speed = -*ball_y_speed;
         reset_positions(ball_coord_x, ball_coord_y, racketJ1_y_coord, racketJ2_y_coord, inputs_allowed);
-        *scorej2 +=1;
+        *scorej1 +=1;
     }
     else if(*ball_coord_x < 0){
         *ball_y_speed = -*ball_y_speed;
         reset_positions(ball_coord_x, ball_coord_y, racketJ1_y_coord, racketJ2_y_coord, inputs_allowed);
-        *scorej1 +=1;
+        *scorej2 +=1;
     }
     if (*ball_coord_y > WINDOW_HEIGHT || *ball_coord_y < 0){
         *ball_x_speed = -*ball_x_speed;
@@ -198,11 +200,31 @@ void test_edge_colisions(int* ball_coord_x, int* ball_coord_y, int* ball_x_speed
 
 /*tests if the ball collides with the rackets, changing it's direction */
 void test_racket_colisions(int ball_coord_x, int ball_coord_y, int* ball_x_speed, int* ball_y_speed, int racketJ1_coord_y, int racketJ2_coord_y){
-    if (ball_coord_y >= racketJ1_coord_y - *ball_y_speed && ball_coord_y <= racketJ1_coord_y + *ball_y_speed + RACKET_HEIGHT && ball_coord_x >= RACKET_INIT_X_P1 && ball_coord_x <= RACKET_INIT_X_P1 + RACKET_WIDTH){
-        *ball_y_speed = -*ball_y_speed;
+
+    // collisions avec rackette J1
+    if (ball_coord_x >= RACKET_INIT_X_P1 && ball_coord_x <= RACKET_INIT_X_P1 + RACKET_WIDTH){
+        if ((ball_coord_y >= racketJ1_coord_y && ball_coord_y <= racketJ1_coord_y + RACKET_SPEED_UP_HEIGHT) || (ball_coord_y <= racketJ1_coord_y + RACKET_HEIGHT && ball_coord_y >= racketJ1_coord_y + RACKET_HEIGHT - RACKET_SPEED_UP_HEIGHT)){  // si la balle touche les bords haut et bas
+            if (*ball_x_speed < BALL_MAX_X_SPEED){
+                *ball_x_speed += 2;
+            }
+            *ball_y_speed = -*ball_y_speed;
+        }
+        else if(ball_coord_y >= racketJ1_coord_y + RACKET_SPEED_UP_HEIGHT && ball_coord_y <= racketJ1_coord_y + RACKET_HEIGHT - RACKET_SPEED_UP_HEIGHT){ // si elle touche le reste de la rackette
+            *ball_y_speed = -*ball_y_speed;
+        }
     }
-    else if (ball_coord_y >= racketJ2_coord_y - *ball_y_speed && ball_coord_y <= racketJ2_coord_y + *ball_y_speed + RACKET_HEIGHT && ball_coord_x >= RACKET_INIT_X_P2  && ball_coord_x <= RACKET_INIT_X_P2 + RACKET_WIDTH){
-        *ball_y_speed = -*ball_y_speed;
+
+    // collisions avec rackette J2
+    else if (ball_coord_x >= RACKET_INIT_X_P2  && ball_coord_x <= RACKET_INIT_X_P2 + RACKET_WIDTH){
+        if ((ball_coord_y >= racketJ2_coord_y && ball_coord_y <= racketJ2_coord_y + RACKET_SPEED_UP_HEIGHT) || (ball_coord_y <= racketJ2_coord_y + RACKET_HEIGHT && ball_coord_y >= racketJ2_coord_y + RACKET_HEIGHT - RACKET_SPEED_UP_HEIGHT)){ // si la balle touche les bords haut et bas
+            if (*ball_x_speed < BALL_MAX_X_SPEED){
+                *ball_x_speed += 2;
+            }
+            *ball_y_speed = -*ball_y_speed;
+        }
+        else if (ball_coord_y >= racketJ2_coord_y + RACKET_SPEED_UP_HEIGHT && ball_coord_y <= racketJ2_coord_y + RACKET_HEIGHT - RACKET_SPEED_UP_HEIGHT){   //si elle touche le reste de la rackette
+            *ball_y_speed = -*ball_y_speed;
+        }
     }
 }
 
